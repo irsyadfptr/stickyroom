@@ -87,6 +87,6 @@ npm run lint
 It's a static site, so there are no env vars to set.
 
 - **Vercel:** import the repo and deploy. The defaults work.
-- **GitHub Pages:** `.github/workflows/pages.yml` builds `out/` on every push to `master`. One-time setup: **Settings → Pages → Source: GitHub Actions**. The site is served at `https://irsyadfptr.github.io/stickyroom/`.
+- **GitHub Pages:** `.github/workflows/pages.yml` builds `out/` on every push to `feat/serverless-board`. One-time setup: **Settings → Pages → Source: GitHub Actions**. The site is served at `https://irsyadfptr.github.io/stickyroom/`.
 
 The old WebSocket server (`yjs-be`) is no longer needed.
