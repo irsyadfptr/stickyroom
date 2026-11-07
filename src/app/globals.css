@@ -1,16 +1,24 @@
 @import "tailwindcss";
 
+/* Neo-brutalist tokens: flat saturated colour, one ink colour, hard shadows, no blur. */
 @theme {
-  --color-paper: #f4efe4;
-  --color-ink: #1f1d1a;
-  --color-note-yellow: #fde68a;
-  --color-note-pink: #fbcfe8;
-  --color-note-mint: #bbf7d0;
-  --color-note-sky: #bae6fd;
-  --color-note-lilac: #ddd6fe;
+  --color-paper: #fff6e0;
+  --color-ink: #111111;
+  --color-pop-yellow: #ffd23f;
+  --color-pop-pink: #ff8fb8;
+  --color-pop-blue: #6cb4ff;
+  --color-pop-green: #5fdd9d;
+  --color-pop-purple: #b79cff;
+  --color-pop-orange: #ff6b35;
+
+  --color-note-yellow: var(--color-pop-yellow);
+  --color-note-pink: var(--color-pop-pink);
+  --color-note-mint: var(--color-pop-green);
+  --color-note-sky: var(--color-pop-blue);
+  --color-note-lilac: var(--color-pop-purple);
 
   --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
+  --font-display: var(--font-archivo), "Arial Black", ui-sans-serif, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
@@ -21,20 +29,63 @@ body {
   overscroll-behavior: none;
 }
 
-.board-dots {
-  background-image: radial-gradient(rgb(31 29 26 / 0.18) 1.2px, transparent 1.2px);
-  background-size: 24px 24px;
+/* Graph-paper board */
+.board-grid {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(rgb(17 17 17 / 0.09) 2px, transparent 2px),
+    linear-gradient(90deg, rgb(17 17 17 / 0.09) 2px, transparent 2px);
+  background-size: 40px 40px;
 }
 
-/* Hard "sticker" shadow used across buttons and panels */
-.ink-shadow {
+.nb-box {
+  border: 3px solid var(--color-ink);
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+
+/* Chunky button that "presses" into its shadow */
+.nb-btn {
+  border: 3px solid var(--color-ink);
   box-shadow: 3px 3px 0 var(--color-ink);
+  font-weight: 700;
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out,
+    background-color 80ms;
+}
+.nb-btn:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+.nb-btn:active:not(:disabled),
+.nb-btn[aria-pressed="true"] {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--color-ink);
+}
+.nb-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.nb-btn:focus-visible,
+.nb-input:focus-visible {
+  outline: 3px solid var(--color-pop-blue);
+  outline-offset: 2px;
+}
+
+.nb-input {
+  border: 3px solid var(--color-ink);
+  background: #fff;
+  font-weight: 600;
+}
+.nb-input:focus {
+  box-shadow: 4px 4px 0 var(--color-ink);
+  outline: none;
 }
 
 @keyframes pop-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.97);
+    transform: translate(6px, 6px);
   }
   to {
     opacity: 1;
@@ -42,7 +93,7 @@ body {
   }
 }
 .pop-in {
-  animation: pop-in 160ms ease-out both;
+  animation: pop-in 140ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

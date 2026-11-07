@@ -5,7 +5,7 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { contrastText, resolveRoomId } from "@/lib/room";
 
 const PROFILE_KEY = "stickyroom:profile";
-const USER_COLORS = ["#e4572e", "#2e86ab", "#3bb273", "#7768ae", "#f2a541", "#d1495b", "#1f1d1a"];
+const USER_COLORS = ["#ff6b35", "#6cb4ff", "#5fdd9d", "#b79cff", "#ff8fb8", "#ffd23f"];
 
 // Optional: comma-separated wss:// URLs. Leave unset to use y-webrtc's free public server.
 const SIGNALING = process.env.NEXT_PUBLIC_SIGNALING_URLS
@@ -116,8 +116,8 @@ export const useYjsContext = () => useContext(YjsContext);
 
 function Splash({ children }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-paper font-mono text-sm text-ink/60">
-      {children}
+    <div className="board-grid grid min-h-dvh place-items-center px-4">
+      <p className="nb-box bg-pop-yellow px-4 py-2 font-mono text-sm font-bold uppercase tracking-wider">{children}</p>
     </div>
   );
 }
@@ -132,56 +132,62 @@ function JoinScreen({ room, onJoin }) {
   };
 
   return (
-    <div className="board-dots grid min-h-dvh place-items-center bg-paper px-4">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-sm -rotate-1 rounded-sm border-2 border-ink bg-note-yellow p-7 shadow-[6px_6px_0_var(--color-ink)]"
-      >
-        <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Room · {room}</p>
-        <h1 className="mt-2 font-hand text-5xl leading-none text-ink">Stickyroom</h1>
-        <p className="mt-3 text-sm text-ink/75">
-          A shared sticky-note board. No sign-up and no server: your board lives in your browser and syncs straight to
-          whoever opens the same link.
-        </p>
+    <div className="board-grid grid min-h-dvh place-items-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="nb-box -rotate-2 bg-pop-pink px-2 py-0.5 font-mono text-xs font-bold uppercase">No sign-up</span>
+          <span className="nb-box rotate-1 bg-pop-green px-2 py-0.5 font-mono text-xs font-bold uppercase">No server</span>
+          <span className="nb-box -rotate-1 bg-pop-blue px-2 py-0.5 font-mono text-xs font-bold uppercase">Real-time</span>
+        </div>
 
-        <label className="mt-6 block text-sm font-semibold text-ink" htmlFor="join-name">
-          Your name
-        </label>
-        <input
-          id="join-name"
-          className="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-ink outline-none focus:ring-4 focus:ring-ink/15"
-          placeholder="e.g. Putra"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={24}
-          autoFocus
-          required
-        />
-
-        <fieldset className="mt-5">
-          <legend className="text-sm font-semibold text-ink">Your cursor colour</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {USER_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Colour ${c}`}
-                aria-pressed={color === c}
-                onClick={() => setColor(c)}
-                className={`h-8 w-8 rounded-full border-2 border-ink transition-transform ${color === c ? "scale-110 ring-4 ring-ink/25" : "hover:scale-105"}`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+        <form onSubmit={submit} className="nb-box bg-white shadow-[8px_8px_0_var(--color-ink)]">
+          <div className="border-b-[3px] border-ink bg-pop-yellow px-6 py-5">
+            <p className="font-mono text-xs font-bold uppercase tracking-widest">Room / {room}</p>
+            <h1 className="mt-1 font-display text-5xl uppercase leading-[0.9] tracking-tight">Sticky&shy;room</h1>
           </div>
-        </fieldset>
 
-        <button
-          type="submit"
-          className="mt-7 w-full rounded-sm border-2 border-ink bg-ink py-2.5 font-semibold text-paper transition-transform hover:-translate-y-0.5 active:translate-y-0"
-        >
-          Enter the room →
-        </button>
-      </form>
+          <div className="px-6 py-6">
+            <p className="text-[15px] font-medium leading-snug">
+              A shared sticky-note board. Your board lives in your browser and syncs straight to whoever opens the same link.
+            </p>
+
+            <label className="mt-6 block font-display text-sm uppercase" htmlFor="join-name">
+              Your name
+            </label>
+            <input
+              id="join-name"
+              className="nb-input mt-2 w-full px-3 py-2.5"
+              placeholder="e.g. Putra"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={24}
+              autoFocus
+              required
+            />
+
+            <fieldset className="mt-6">
+              <legend className="font-display text-sm uppercase">Cursor colour</legend>
+              <div className="mt-2 flex flex-wrap gap-2.5">
+                {USER_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Colour ${c}`}
+                    aria-pressed={color === c}
+                    onClick={() => setColor(c)}
+                    className="nb-btn h-9 w-9"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </fieldset>
+
+            <button type="submit" className="nb-btn mt-8 w-full bg-pop-orange py-3 font-display text-lg uppercase text-ink">
+              Enter the room →
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

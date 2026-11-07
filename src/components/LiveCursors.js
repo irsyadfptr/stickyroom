@@ -18,12 +18,12 @@ export default function LiveCursors({ peers }) {
                 d="M5.65 21.16 2.3 3.51l18.6 11.36-9.37 2.65-2.4 7.58-3.48-3.94Z"
                 fill={state.user.color}
                 stroke="var(--color-ink)"
-                strokeWidth="1.5"
+                strokeWidth="2.5"
                 strokeLinejoin="round"
               />
             </svg>
             <span
-              className="ml-4 -mt-1 inline-block whitespace-nowrap rounded-sm border-2 border-ink px-1.5 py-0.5 text-xs font-semibold"
+              className="ml-4 -mt-1 inline-block whitespace-nowrap border-[3px] border-ink px-1.5 py-0.5 font-mono text-xs font-bold shadow-[3px_3px_0_var(--color-ink)]"
               style={{ backgroundColor: state.user.color, color: state.user.textColor }}
             >
               {state.user.name}

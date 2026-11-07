@@ -139,11 +139,11 @@ export default function BoardPage() {
         onLeave={leave}
       />
 
-      <main ref={scrollRef} className="absolute inset-x-0 bottom-0 top-14 overflow-auto" aria-label="Sticky-note board">
+      <main ref={scrollRef} className="absolute inset-x-0 bottom-0 top-16 overflow-auto" aria-label="Sticky-note board">
         <div
           ref={worldRef}
           data-testid="board"
-          className="board-dots relative"
+          className="board-grid relative"
           style={{ width: WORLD.width, height: WORLD.height }}
           onPointerMove={onBoardPointerMove}
           onPointerLeave={onBoardPointerLeave}
@@ -157,10 +157,10 @@ export default function BoardPage() {
       </main>
 
       {noteIds.length === 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-28 top-14 grid place-items-center px-6 text-center">
-          <div>
-            <p className="font-hand text-4xl text-ink/70">An empty board.</p>
-            <p className="mt-1 text-sm text-ink/60">
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 top-16 grid place-items-center px-6 text-center">
+          <div className="nb-box rotate-1 bg-white px-6 py-5">
+            <p className="font-display text-3xl uppercase leading-none sm:text-4xl">Empty board</p>
+            <p className="mt-2 text-sm font-semibold">
               <span className="hidden sm:inline">
                 Double-click anywhere, press <b>N</b>, or use <b>+ Note</b> below.
               </span>
@@ -176,15 +176,15 @@ export default function BoardPage() {
       <div
         role="toolbar"
         aria-label="Board tools"
-        className={`ink-shadow fixed bottom-4 left-1/2 z-[9400] flex -translate-x-1/2 items-center gap-1 rounded-sm border-2 border-ink bg-paper p-1.5 ${chatOpen ? "max-sm:hidden" : ""}`}
+        className={`nb-box fixed bottom-4 left-1/2 z-[9400] flex -translate-x-1/2 items-center gap-1 bg-white p-1.5 shadow-[6px_6px_0_var(--color-ink)] sm:gap-1.5 sm:p-2 ${chatOpen ? "max-sm:hidden" : ""}`}
       >
         <button
           onClick={addNoteInView}
-          className="inline-flex h-9 items-center gap-1 rounded-sm border-2 border-ink bg-ink px-3 text-sm font-semibold text-paper"
+          className="nb-btn inline-flex h-9 items-center gap-1 bg-pop-orange px-2 font-display text-sm uppercase sm:h-10 sm:px-3"
         >
-          <Plus size={16} /> Note
+          <Plus size={18} strokeWidth={3} /> Note
         </button>
-        <div className="mx-1 flex gap-1" role="radiogroup" aria-label="Next note colour">
+        <div className="mx-0.5 flex gap-1 sm:mx-1 sm:gap-1.5" role="radiogroup" aria-label="Next note colour">
           {NOTE_COLORS.map((c) => (
             <button
               key={c.id}
@@ -192,12 +192,12 @@ export default function BoardPage() {
               aria-checked={noteColor === c.id}
               aria-label={`${c.id} note`}
               onClick={() => setNoteColor(c.id)}
-              className={`h-6 w-6 rounded-full border-2 border-ink transition-transform ${noteColor === c.id ? "scale-110 ring-2 ring-ink ring-offset-2 ring-offset-paper" : "hover:scale-110"}`}
+              className={`h-6 w-6 border-[3px] sm:h-7 sm:w-7 border-ink transition-transform ${noteColor === c.id ? "-translate-y-1 shadow-[3px_3px_0_var(--color-ink)]" : "hover:-translate-y-0.5"}`}
               style={{ backgroundColor: c.value }}
             />
           ))}
         </div>
-        <span className="mx-1 h-6 w-0.5 bg-ink/30" aria-hidden="true" />
+        <span className="mx-0.5 h-8 w-[3px] bg-ink sm:mx-1" aria-hidden="true" />
         <ToolButton onClick={undo} disabled={!canUndo} label="Undo your last change (Ctrl/⌘ Z)" icon={Undo2} />
         <ToolButton onClick={redo} disabled={!canRedo} label="Redo (Ctrl/⌘ Shift Z)" icon={Redo2} />
       </div>
@@ -209,7 +209,7 @@ export default function BoardPage() {
       {toast && (
         <div
           role="status"
-          className="pop-in fixed left-1/2 top-20 z-[10001] max-w-[90vw] -translate-x-1/2 rounded-sm border-2 border-ink bg-ink px-3 py-2 text-sm font-semibold text-paper"
+          className="nb-box pop-in fixed left-1/2 top-20 z-[10001] max-w-[90vw] -translate-x-1/2 bg-pop-green px-4 py-2 text-sm font-bold"
         >
           {toast}
         </div>
@@ -225,9 +225,9 @@ function ToolButton({ onClick, disabled, label, icon: Icon }) {
       disabled={disabled}
       aria-label={label}
       title={label}
-      className="grid h-9 w-9 place-items-center rounded-sm border-2 border-transparent hover:border-ink hover:bg-white disabled:opacity-30 disabled:hover:border-transparent disabled:hover:bg-transparent"
+      className="nb-btn grid h-9 w-9 place-items-center bg-white sm:h-10 sm:w-10"
     >
-      <Icon size={18} />
+      <Icon size={18} strokeWidth={2.5} />
     </button>
   );
 }
