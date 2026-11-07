@@ -1,27 +1,19 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export function usePresence(provider) {
-  const [users, setUsers] = useState(new Map());
+// Everyone else in the room right now: [clientID, awarenessState][] (you are left out).
+export function usePeers(provider) {
+  const [peers, setPeers] = useState([]);
 
   useEffect(() => {
-    if (!provider || !provider.awareness) return;
+    if (!provider) return;
+    const { awareness } = provider;
+    const update = () =>
+      setPeers(Array.from(awareness.getStates().entries()).filter(([id, s]) => id !== awareness.clientID && s.user));
 
-    const awareness = provider.awareness;
-
-    const updateUsers = () => {
-      const states = awareness.getStates();
-      // console.log(`👥 [Awareness Change] ${states.size} peer state(s) active`, Object.fromEntries(states));
-      setUsers(new Map(states));
-    };
-
-    // Listen to changes from other connected clients
-    awareness.on("change", updateUsers);
-    updateUsers(); // initial sync
-
-    return () => {
-      awareness.off("change", updateUsers);
-    };
+    awareness.on("change", update);
+    update();
+    return () => awareness.off("change", update);
   }, [provider]);
 
-  return users;
+  return peers;
 }

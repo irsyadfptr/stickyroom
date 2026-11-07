@@ -1,227 +1,187 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { createContext, useContext, useEffect, useState } from "react";
 import * as Y from "yjs";
-import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
-import LiveCursors from "./LiveCursors";
+import { contrastText, resolveRoomId } from "@/lib/room";
 
-// Helper: Determine if text should be black or white based on background HEX
-function getContrastTextColor(hexColor) {
-  const hex = hexColor.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 128 ? "#000000" : "#ffffff";
-}
+const PROFILE_KEY = "stickyroom:profile";
+const USER_COLORS = ["#e4572e", "#2e86ab", "#3bb273", "#7768ae", "#f2a541", "#d1495b", "#1f1d1a"];
+
+// Optional: comma-separated wss:// URLs. Leave unset to use y-webrtc's free public server.
+const SIGNALING = process.env.NEXT_PUBLIC_SIGNALING_URLS
+  ? process.env.NEXT_PUBLIC_SIGNALING_URLS.split(",").map((s) => s.trim()).filter(Boolean)
+  : undefined;
 
 const YjsContext = createContext(null);
 
-export function YjsProvider({ children }) {
-  const [nameInput, setNameInput] = useState("");
-  const [colorInput, setColorInput] = useState("#3b82f6");
-
-  const [userContext, setUserContext] = useState({
-    name: "",
-    color: "",
-    textColor: "",
-  });
-
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  const [yjsState, setYjsState] = useState({
-    doc: null,
-    provider: null,
-    status: "connecting",
-    isOfflineDataLoaded: false,
-  });
-
-  const pathname = usePathname();
-
-  const yjsRefs = useRef({ doc: null, wsProvider: null, idbProvider: null });
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("yjs-user-profile");
-    if (savedUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUserContext(JSON.parse(savedUser));
+// One id per browser tab (it survives reloads). Two tabs with the same name still count as two people.
+function tabId() {
+  try {
+    let id = sessionStorage.getItem("stickyroom:tab");
+    if (!id) {
+      id = Math.random().toString(36).slice(2, 10);
+      sessionStorage.setItem("stickyroom:tab", id);
     }
-    setIsInitializing(false);
+    return id;
+  } catch {
+    return Math.random().toString(36).slice(2, 10);
+  }
+}
+
+function readProfile() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+    return saved?.name ? { ...saved, id: tabId() } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function YjsProvider({ children }) {
+  const [booted, setBooted] = useState(false);
+  const [user, setUser] = useState(null);
+  const [room, setRoom] = useState("");
+  const [session, setSession] = useState(null); // { doc, provider }
+  const [loaded, setLoaded] = useState(false);
+
+  // Profile and room only exist in the browser, so read them after mount.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setUser(readProfile());
+    setRoom(resolveRoomId());
+    setBooted(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  const handleJoin = (e) => {
-    e.preventDefault();
-    if (nameInput.trim()) {
-      const newUserContext = {
-        name: nameInput.trim(),
-        color: colorInput,
-        textColor: getContrastTextColor(colorInput),
-      };
-
-      setUserContext(newUserContext);
-      // NEW: Save to localStorage so it survives refresh
-      localStorage.setItem("yjs-user-profile", JSON.stringify(newUserContext));
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("yjs-user-profile");
-    setUserContext({ name: "", color: "", textColor: "" });
-  };
-
+  // One Y.Doc per room. Two layers keep it in sync, neither of them a server we run:
+  //  - y-webrtc: other tabs via BroadcastChannel, other devices via WebRTC
+  //  - y-indexeddb: a copy on this device, so the board survives reloads and offline use
+  const joined = Boolean(user);
   useEffect(() => {
-    if (!userContext.name) return;
-    if (yjsRefs.current.doc) return;
+    if (!joined || !room) return;
+    let cancelled = false;
+    const doc = new Y.Doc();
+    const roomName = `stickyroom-${room}`;
+    const local = new IndexeddbPersistence(roomName, doc);
+    let provider = null;
 
-    // console.log("🚀 [Yjs Engine] Booting up collaborative environment...");
-    console.time("⏱️ [IndexedDB] Time to load local data");
+    local.whenSynced.then(() => !cancelled && setLoaded(true));
 
-    const ydoc = new Y.Doc();
-    console.log(ydoc);
-    const roomName = "multi-page-workspace";
-
-    // 1. Initialize WebSocket (Cloud)
-    const wsUrl = `ws://${window.location.hostname}:1234`;
-    const yprovider = new WebsocketProvider(wsUrl, roomName, ydoc);
-
-    // 2. Initialize IndexedDB (Local Offline Storage)
-    const indexeddbProvider = new IndexeddbPersistence(roomName, ydoc);
-
-    // LOG: Watch IndexedDB speed
-    indexeddbProvider.on("synced", () => {
-      console.timeEnd("⏱️ [IndexedDB] Time to load local data");
-      // console.log(
-      //   "💾 [IndexedDB] Offline data successfully loaded into memory!",
-      // );
-      setYjsState((prev) => ({ ...prev, isOfflineDataLoaded: true }));
+    // y-webrtc touches browser-only APIs on import, so load it on the client only.
+    import("y-webrtc").then(({ WebrtcProvider }) => {
+      if (cancelled) return;
+      provider = new WebrtcProvider(roomName, doc, SIGNALING ? { signaling: SIGNALING } : {});
+      setSession({ doc, provider });
     });
-
-    // LOG: Watch Network status
-    yprovider.on("status", (event) => {
-      setYjsState((prev) => ({ ...prev, status: event.status }));
-      // console.log(
-      //   `🌐 [WebSocket] Status changed to: ${event.status.toUpperCase()}`,
-      // );
-      if (event.status === "connected") {
-        // console.log(
-        //   "☁️ [Network] Connected! Ready to sync local diffs to the cloud.",
-        // );
-      }
-    });
-
-    yjsRefs.current = {
-      doc: ydoc,
-      wsProvider: yprovider,
-      idbProvider: indexeddbProvider,
-    };
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setYjsState((prev) => ({
-      ...prev,
-      doc: ydoc,
-      provider: yprovider,
-      status: "connecting",
-    }));
 
     return () => {
-      if (yjsRefs.current.wsProvider) {
-        yjsRefs.current.wsProvider.disconnect();
-        yjsRefs.current.doc.destroy();
-        yjsRefs.current = { doc: null, wsProvider: null, idbProvider: null };
-      }
+      cancelled = true;
+      provider?.destroy();
+      local.destroy();
+      doc.destroy();
+      setSession(null);
+      setLoaded(false);
     };
-  }, [userContext.name]);
+  }, [joined, room]);
 
-  // Track page location and custom colors in Awareness
+  // Tell everyone else who we are.
   useEffect(() => {
-    if (!yjsState.provider) return;
-    const payload = {
-      name: userContext.name,
-      color: userContext.color,
-      textColor: userContext.textColor,
-      location: pathname,
-    };
-    // console.log(`📡 [Awareness] Broadcasting user presence →`, payload);
-    yjsState.provider.awareness.setLocalStateField("user", payload);
-  }, [pathname, yjsState.provider, userContext]);
+    if (!session || !user) return;
+    session.provider.awareness.setLocalStateField("user", user);
+  }, [session, user]);
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
+  const join = (name, color) => {
+    const profile = { name, color, textColor: contrastText(color) };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    setUser({ ...profile, id: tabId() });
+  };
 
-  if (!userContext.name) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <form
-          onSubmit={handleJoin}
-          className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full"
-        >
-          <h2 className="text-2xl font-bold mb-6">Join Workspace</h2>
+  const leave = () => {
+    localStorage.removeItem(PROFILE_KEY);
+    setUser(null);
+  };
 
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Your Name
-              </label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-4 py-2 focus:ring-2 focus:outline-none"
-                placeholder="e.g. Jane Doe"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                autoFocus
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Pick a Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  className="w-12 h-12 rounded cursor-pointer border-0 p-0"
-                  value={colorInput}
-                  onChange={(e) => setColorInput(e.target.value)}
-                />
-                <span className="text-sm text-gray-500 font-mono uppercase">
-                  {colorInput}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-black text-white rounded-md py-2 font-medium hover:bg-gray-800"
-          >
-            Enter Room
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  if (!yjsState.doc || !yjsState.isOfflineDataLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8 text-center text-gray-500 font-mono">
-        Loading local workspace data...
-      </div>
-    );
-  }
+  if (!booted) return <Splash>Opening the board…</Splash>;
+  if (!user) return <JoinScreen room={room} onJoin={join} />;
+  if (!session || !loaded) return <Splash>Loading room {room}…</Splash>;
 
   return (
-    <YjsContext.Provider value={{ ...yjsState, ...userContext, handleLogout }}>
-      <LiveCursors provider={yjsState.provider} />
+    <YjsContext.Provider value={{ ...session, room, user, leave }}>
       {children}
     </YjsContext.Provider>
   );
 }
 
 export const useYjsContext = () => useContext(YjsContext);
+
+function Splash({ children }) {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-paper font-mono text-sm text-ink/60">
+      {children}
+    </div>
+  );
+}
+
+function JoinScreen({ room, onJoin }) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(USER_COLORS[1]);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (name.trim()) onJoin(name.trim().slice(0, 24), color);
+  };
+
+  return (
+    <div className="board-dots grid min-h-dvh place-items-center bg-paper px-4">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm -rotate-1 rounded-sm border-2 border-ink bg-note-yellow p-7 shadow-[6px_6px_0_var(--color-ink)]"
+      >
+        <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Room · {room}</p>
+        <h1 className="mt-2 font-hand text-5xl leading-none text-ink">Stickyroom</h1>
+        <p className="mt-3 text-sm text-ink/75">
+          A shared sticky-note board. No sign-up and no server: your board lives in your browser and syncs straight to
+          whoever opens the same link.
+        </p>
+
+        <label className="mt-6 block text-sm font-semibold text-ink" htmlFor="join-name">
+          Your name
+        </label>
+        <input
+          id="join-name"
+          className="mt-1 w-full rounded-sm border-2 border-ink bg-white px-3 py-2 text-ink outline-none focus:ring-4 focus:ring-ink/15"
+          placeholder="e.g. Putra"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={24}
+          autoFocus
+          required
+        />
+
+        <fieldset className="mt-5">
+          <legend className="text-sm font-semibold text-ink">Your cursor colour</legend>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {USER_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Colour ${c}`}
+                aria-pressed={color === c}
+                onClick={() => setColor(c)}
+                className={`h-8 w-8 rounded-full border-2 border-ink transition-transform ${color === c ? "scale-110 ring-4 ring-ink/25" : "hover:scale-105"}`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </fieldset>
+
+        <button
+          type="submit"
+          className="mt-7 w-full rounded-sm border-2 border-ink bg-ink py-2.5 font-semibold text-paper transition-transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          Enter the room →
+        </button>
+      </form>
+    </div>
+  );
+}

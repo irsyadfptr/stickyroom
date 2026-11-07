@@ -1,86 +1,36 @@
 "use client";
-import { useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { usePresence } from "../hooks/usePresence";
 
-export default function LiveCursors({ provider }) {
-  const users = usePresence(provider);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (!provider) return;
-
-    const handlePointerMove = (e) => {
-      provider.awareness.setLocalStateField("cursor", {
-        x: e.clientX,
-        y: e.clientY,
-      });
-    };
-
-    const handlePointerLeave = () => {
-      provider.awareness.setLocalStateField("cursor", null);
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerleave", handlePointerLeave);
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerleave", handlePointerLeave);
-    };
-  }, [provider]);
-
-  if (!provider) return null;
-  const clientID = provider.awareness.clientID;
-
+// Other people's cursors, drawn in board coordinates so they line up no matter
+// how each person has scrolled or sized their window.
+export default function LiveCursors({ peers }) {
   return (
     <>
-      {Array.from(users.entries()).map(([id, state]) => {
-        // FILTER APPLIED HERE:
-        // Do not render if it's our own cursor, if they have no cursor state,
-        // or if they are NOT on the same page as us.
-        if (
-          id === clientID ||
-          !state.cursor ||
-          !state.user ||
-          state.user.location !== pathname
-        ) {
-          return null;
-        }
-
-        return (
+      {peers.map(([id, state]) =>
+        state.cursor && state.user ? (
           <div
             key={id}
-            className="pointer-events-none fixed top-0 left-0 z-50 transition-transform duration-75 ease-linear"
-            style={{
-              transform: `translate(${state.cursor.x}px, ${state.cursor.y}px)`,
-            }}
+            data-testid="remote-cursor"
+            className="pointer-events-none absolute left-0 top-0 z-[9999] transition-transform duration-75 ease-linear"
+            style={{ transform: `translate(${state.cursor.x}px, ${state.cursor.y}px)` }}
           >
-            <svg
-              width="24"
-              height="36"
-              viewBox="0 0 24 36"
-              fill="none"
-              className="drop-shadow-md"
-            >
+            <svg width="22" height="30" viewBox="0 0 24 36" fill="none" aria-hidden="true">
               <path
-                d="M5.65376 21.1573L2.30604 3.51351L20.8931 14.8696L11.5317 17.519L9.1235 25.1017L5.65376 21.1573Z"
+                d="M5.65 21.16 2.3 3.51l18.6 11.36-9.37 2.65-2.4 7.58-3.48-3.94Z"
                 fill={state.user.color}
+                stroke="var(--color-ink)"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
               />
             </svg>
-
-            <div
-              className="ml-4 mt-1 px-2 py-1 text-xs rounded-md whitespace-nowrap shadow-sm"
-              style={{
-                backgroundColor: state.user.color,
-                color: state.user.textColor,
-              }}
+            <span
+              className="ml-4 -mt-1 inline-block whitespace-nowrap rounded-sm border-2 border-ink px-1.5 py-0.5 text-xs font-semibold"
+              style={{ backgroundColor: state.user.color, color: state.user.textColor }}
             >
               {state.user.name}
-            </div>
+            </span>
           </div>
-        );
-      })}
+        ) : null,
+      )}
     </>
   );
 }

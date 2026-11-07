@@ -1,26 +1,55 @@
 @import "tailwindcss";
 
-/* :root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-paper: #f4efe4;
+  --color-ink: #1f1d1a;
+  --color-note-yellow: #fde68a;
+  --color-note-pink: #fbcfe8;
+  --color-note-mint: #bbf7d0;
+  --color-note-sky: #bae6fd;
+  --color-note-lilac: #ddd6fe;
+
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-hand: var(--font-caveat), "Comic Sans MS", cursive;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  overscroll-behavior: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.board-dots {
+  background-image: radial-gradient(rgb(31 29 26 / 0.18) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+/* Hard "sticker" shadow used across buttons and panels */
+.ink-shadow {
+  box-shadow: 3px 3px 0 var(--color-ink);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
+.pop-in {
+  animation: pop-in 160ms ease-out both;
+}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,138 +1,81 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Send, X } from "lucide-react";
 
-export default function CollabChat({ doc, userName, color }) {
-  const [messages, setMessages] = useState([]);
+const time = (at) => new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// Side panel on desktop, bottom sheet on phones. Messages come from useChat (a Y.Array).
+export default function CollabChat({ messages, onSend, me, onClose }) {
   const [input, setInput] = useState("");
+  const listRef = useRef(null);
 
   useEffect(() => {
-    if (!doc) return;
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages.length]);
 
-    const yMessages = doc.getArray("chat");
-
-    const updateMessages = () => {
-      console.time("⏱️ [Y.Array] React Render");
-
-      const rawArray = yMessages.toArray();
-      // console.log("🔍 [Y.Array State] Extracted List:", yMessages, "=>", rawArray);
-
-      setMessages(rawArray);
-
-      console.timeEnd("⏱️ [Y.Array] React Render");
-    };
-
-    // Listen for changes
-    const observer = (event) => {
-      // console.log("⚡ [Y.Array Event] Delta received from CRDT engine!");
-      updateMessages();
-    };
-
-    yMessages.observe(observer);
-    updateMessages();
-
-    return () => yMessages.unobserve(observer);
-  }, [doc]);
-
-  const sendMessage = (e) => {
+  const submit = (e) => {
     e.preventDefault();
-    if (!input.trim() || !doc) return;
-
-    // console.log("📤 [Yjs Action] Pushing new message to Y.Array...");
-    const yMessages = doc.getArray("chat");
-
-    yMessages.push([
-      {
-        id: Date.now(),
-        text: input,
-        user: userName,
-        color,
-      },
-    ]);
-
+    const text = input.trim();
+    if (!text) return;
+    onSend(text.slice(0, 500));
     setInput("");
   };
 
-  const clearChat = () => {
-    if (!doc) return;
-    const yMessages = doc.getArray("chat");
-    yMessages.delete(0, yMessages.length);
-  };
-
   return (
-    <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col h-[500px]">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-lg">Collaborative Chat</h2>
-        <button
-          onClick={clearChat}
-          className="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full hover:bg-red-200 transition-colors"
-        >
-          Clear Chat
+    <aside
+      aria-label="Room chat"
+      className="pop-in fixed inset-x-2 bottom-2 z-[9000] flex h-[55dvh] flex-col rounded-sm border-2 border-ink bg-paper shadow-[5px_5px_0_var(--color-ink)] sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-20 sm:h-auto sm:w-80"
+    >
+      <header className="flex items-center justify-between border-b-2 border-ink px-3 py-2">
+        <h2 className="font-hand text-2xl leading-none">Room chat</h2>
+        <button onClick={onClose} aria-label="Close chat" className="rounded-sm p-1 hover:bg-ink/10">
+          <X size={18} />
         </button>
-      </div>
+      </header>
 
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2">
-        {messages.map((msg) => {
-          // Check if this message belongs to the current user
-          const isMe = msg.user === userName;
-
+      <ol ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
+        {messages.length === 0 && (
+          <li className="grid h-full place-items-center text-center text-sm text-ink/55">
+            No messages yet.
+            <br />
+            Say hi to whoever&apos;s on the board.
+          </li>
+        )}
+        {messages.map((m) => {
+          const mine = m.authorId === me.id;
           return (
-            <div
-              key={msg.id}
-              // Use flex-row-reverse to push your own messages to the right
-              className={`flex items-start gap-3 ${isMe ? "flex-row-reverse" : "flex-row"}`}
-            >
-              {/* User Initial Circle */}
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm"
-                style={{ backgroundColor: msg.color || "#94a3b8" }}
+            <li key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+              <span className="mb-0.5 flex items-center gap-1.5 text-[11px] text-ink/55">
+                <span className="h-2 w-2 rounded-full border border-ink" style={{ backgroundColor: m.color }} />
+                {mine ? "You" : m.user}
+                {m.at ? ` · ${time(m.at)}` : ""}
+              </span>
+              <p
+                className={`max-w-[85%] whitespace-pre-wrap break-words rounded-sm border-2 border-ink px-2.5 py-1.5 text-sm ${
+                  mine ? "bg-ink text-paper" : "bg-white"
+                }`}
               >
-                {msg.user ? msg.user.charAt(0).toUpperCase() : "?"}
-              </div>
-
-              {/* Chat Bubble & Name */}
-              <div
-                className={`flex flex-col max-w-[80%] ${isMe ? "items-end" : "items-start"}`}
-              >
-                <div
-                  className={`p-3 rounded-2xl text-sm shadow-sm ${
-                    isMe
-                      ? "bg-black text-white rounded-tr-none" // Your messages: Dark bubble, flat top-right corner
-                      : "bg-slate-100 text-gray-800 rounded-tl-none" // Others: Light bubble, flat top-left corner
-                  }`}
-                >
-                  {msg.text}
-                </div>
-                <span
-                  className={`text-[10px] text-gray-400 mt-1 font-medium tracking-wide ${isMe ? "mr-1" : "ml-1"}`}
-                >
-                  {isMe ? "You" : msg.user}
-                </span>
-              </div>
-            </div>
+                {m.text}
+              </p>
+            </li>
           );
         })}
+      </ol>
 
-        {messages.length === 0 && (
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm italic">
-            No messages yet. Start yapping!
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={sendMessage} className="flex gap-2 mt-auto">
+      <form onSubmit={submit} className="flex gap-2 border-t-2 border-ink p-2">
         <input
-          className="border rounded-md px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Message"
+          className="min-w-0 flex-1 rounded-sm border-2 border-ink bg-white px-2.5 py-1.5 text-sm outline-none focus:ring-4 focus:ring-ink/15"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
+          placeholder="Message the room…"
+          maxLength={500}
+          autoFocus
         />
-        <button
-          type="submit"
-          className="bg-black text-white px-5 py-2 rounded-md hover:bg-gray-800 transition-colors font-medium"
-        >
-          Send
+        <button type="submit" aria-label="Send" className="grid w-10 place-items-center rounded-sm border-2 border-ink bg-ink text-paper">
+          <Send size={16} />
         </button>
       </form>
-    </div>
+    </aside>
   );
 }
