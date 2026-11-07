@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # gives the site's base path: "/yjs-fe" for this repo, "" for <user>.github.io
+      # gives the site's base path: "/stickyroom" once the repo is named stickyroom, "" for <user>.github.io
       - id: pages
         uses: actions/configure-pages@v5
       - run: npm ci

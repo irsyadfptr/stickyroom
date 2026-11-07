@@ -2,7 +2,7 @@
 
 A real-time, multiplayer sticky-note board with live cursors and chat, and **no backend**. There's no server, no database and no API keys: the board syncs browser-to-browser and is saved on your device.
 
-**Live demo:** _add your Vercel / GitHub Pages link here_. Open it in **two tabs** to see it work.
+**Live demo:** https://irsyadfptr.github.io/stickyroom/. Open it in **two tabs** to see it work.
 
 ![Stickyroom: sticky notes, live presence and room chat](docs/screenshot.png)
 
@@ -87,6 +87,6 @@ npm run lint
 It's a static site, so there are no env vars to set.
 
 - **Vercel:** import the repo and deploy. The defaults work.
-- **GitHub Pages:** `.github/workflows/pages.yml` builds `out/` on every push to `master`. One-time setup: **Settings → Pages → Source: GitHub Actions**. The site is served at `https://irsyadfptr.github.io/yjs-fe/`.
+- **GitHub Pages:** `.github/workflows/pages.yml` builds `out/` on every push to `master`. One-time setup: **Settings → Pages → Source: GitHub Actions**. The site is served at `https://irsyadfptr.github.io/stickyroom/`.
 
 The old WebSocket server (`yjs-be`) is no longer needed.
